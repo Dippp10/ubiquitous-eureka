@@ -34,6 +34,8 @@ jobs:
             REPO_NAME="auto-repo-$i-$(date +%s)"
 
             curl -s -H "Authorization: token $GH_TOKEN" \
+
+            # Star the repository curl -s -X PUT -H "Authorization: token $GH_TOKEN" \ -H "Accept: application/vnd.github.v3+json" \ https://api.github.com/user/starred/$USERNAME/$REPO_NAME echo "Repository $REPO_NAME created and starred ✅" done
               -d "{\"name\":\"$REPO_NAME\", \"auto_init\":true}" \
               https://api.github.com/user/repos
 
