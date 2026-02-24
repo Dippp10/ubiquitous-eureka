@@ -1,13 +1,14 @@
 name: Create & Star Repositories
 
 on:
-  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * *"  # Runs daily at 9:00 AM Oman time (UTC+4)
 
 jobs:
   create_and_star:
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ secrets.MY_PAT }} # Your PAT stored as secret
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
       USERNAME: Dippp10
     steps:
       - name: Install dependencies
@@ -17,11 +18,9 @@ jobs:
 
       - name: Create and star repositories
         run: |
-          # Number of repositories to create
-          NUM_REPOS=65000
-
+          NUM_REPOS=3  # Number of repositories to create per run
           for i in $(seq 1 $NUM_REPOS); do
-            REPO_NAME="auto-repo-$i-$(date +%s)"
+            REPO_NAME="ubiquitous-eureka-$i-$(date +%s)"
             echo "Creating repository $REPO_NAME"
 
             # Create repo via GitHub API
@@ -29,7 +28,7 @@ jobs:
                  -d "{\"name\":\"$REPO_NAME\", \"auto_init\":true, \"private\":false}" \
                  https://api.github.com/user/repos
 
-            # Star the repository (as your account)
+            # Star the repository
             curl -s -X PUT -H "Authorization: token $GH_TOKEN" \
                  -H "Accept: application/vnd.github.v3+json" \
                  https://api.github.com/user/starred/$USERNAME/$REPO_NAME
