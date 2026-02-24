@@ -16,7 +16,7 @@ jobs:
 
       - name: Create limited repositories safely
         run: |
-          NUM_REPOS=900
+          NUM_REPOS=500
 
           for i in $(seq 1 $NUM_REPOS); do
 
