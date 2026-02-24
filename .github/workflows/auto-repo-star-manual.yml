@@ -7,7 +7,7 @@ jobs:
   create_and_star:
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }} # Your PAT stored as secret
+      GH_TOKEN: ${{ secrets.MY_PAT }} # Your PAT stored as secret
       USERNAME: Dippp10
     steps:
       - name: Install dependencies
