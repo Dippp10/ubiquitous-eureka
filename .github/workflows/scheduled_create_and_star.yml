@@ -2,7 +2,7 @@ name: Scheduled Create and Star Repositories
 
 on:
   schedule:
-    - cron: '0 0 * * *'   # Every day at midnight UTC
+    - cron: '0 0 * * *'   # Runs every day at midnight UTC
   workflow_dispatch:      # Optional manual trigger
 
 jobs:
@@ -10,12 +10,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Set up GitHub CLI
+      - name: Install GitHub CLI
         run: sudo apt update && sudo apt install gh -y
 
       - name: Create and Star Repositories
         env:
-          GH_TOKEN: ${{ secrets.MY_PAT }}
+          GH_TOKEN: ${{ secrets.MY_PAT }}  # Use your Personal Access Token
         run: |
           # Number of repositories to create per run
           NUM_REPOS=3
@@ -24,20 +24,19 @@ jobs:
             REPO_NAME="auto-repo-${{ github.run_number }}-$i"
             echo "Creating repository $REPO_NAME"
 
-            # Create repo using GH_TOKEN directly
-            gh repo create "$REPO_NAME" \
-              --public \
-              --description "Auto-created repo #$i by GitHub Actions" \
-              --confirm
+            # Create repository (skip deprecated --confirm)
+            gh repo create "$REPO_NAME" --public --description "Auto-created repo #$i via Actions"
 
-            # Create a temporary folder for the repo
+            # Create folder and set Git identity
             mkdir $REPO_NAME
             cd $REPO_NAME
+            git config --global user.name "Dippp10"
+            git config --global user.email "deepikakarthik697@gmail.com"
 
-            # Add unique README content
+            # Add unique README
             echo "# $REPO_NAME" > README.md
             echo "Created on $(date -u)" >> README.md
-            echo "This repository was auto-generated via GitHub Actions." >> README.md
+            echo "Auto-generated via GitHub Actions" >> README.md
 
             # Initialize git, commit, push
             git init
@@ -47,14 +46,14 @@ jobs:
             git remote add origin https://github.com/${{ github.repository_owner }}/$REPO_NAME.git
             git push -u origin main
 
-            # Add topics for visibility
+            # Add topics
             gh repo edit "$REPO_NAME" --add-topic "automation" --add-topic "github-actions" --add-topic "demo"
 
-            # Star the repository
-            curl -X PUT -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            # Star repository
+            curl -X PUT -H "Authorization: token ${{ secrets.MY_PAT }}" \
                  -H "Accept: application/vnd.github.v3+json" \
                  https://api.github.com/user/starred/${{ github.repository_owner }}/$REPO_NAME
 
-            # Go back to root directory for next repo
+            # Return to root directory
             cd ..
           done
