@@ -1,38 +1,41 @@
-name: Create & Star Repositories
+name: Create Limited Repositories
 
 on:
   workflow_dispatch:
 
 jobs:
-  create_and_star:
+  create_repos:
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ secrets.MY_PAT }} # Your PAT stored as secret
+      GH_TOKEN: ${{ secrets.MY_PAT }}
       USERNAME: Dippp10
+
     steps:
       - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq curl
+        run: sudo apt-get install -y jq
 
-      - name: Create and star repositories
+      - name: Create limited repositories safely
         run: |
-          # Number of repositories to create
-          NUM_REPOS=5000
+          NUM_REPOS=20
 
           for i in $(seq 1 $NUM_REPOS); do
+
+            # Check remaining rate limit
+            REMAINING=$(curl -s -H "Authorization: token $GH_TOKEN" \
+              https://api.github.com/rate_limit | jq '.rate.remaining')
+
+            echo "Remaining API calls: $REMAINING"
+
+            if [ "$REMAINING" -lt 50 ]; then
+              echo "Rate limit almost exhausted. Stopping."
+              break
+            fi
+
             REPO_NAME="auto-repo-$i-$(date +%s)"
-            echo "Creating repository $REPO_NAME"
 
-            # Create repo via GitHub API
             curl -s -H "Authorization: token $GH_TOKEN" \
-                 -d "{\"name\":\"$REPO_NAME\", \"auto_init\":true, \"private\":false}" \
-                 https://api.github.com/user/repos
+              -d "{\"name\":\"$REPO_NAME\", \"auto_init\":true}" \
+              https://api.github.com/user/repos
 
-            # Star the repository (as your account)
-            curl -s -X PUT -H "Authorization: token $GH_TOKEN" \
-                 -H "Accept: application/vnd.github.v3+json" \
-                 https://api.github.com/user/starred/$USERNAME/$REPO_NAME
-
-            echo "Repository $REPO_NAME created and starred ✅"
+            sleep 3
           done
