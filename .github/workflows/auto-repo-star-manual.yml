@@ -18,7 +18,7 @@ jobs:
       - name: Create and star repositories
         run: |
           # Number of repositories to create
-          NUM_REPOS=65000
+          NUM_REPOS=5000
 
           for i in $(seq 1 $NUM_REPOS); do
             REPO_NAME="auto-repo-$i-$(date +%s)"
