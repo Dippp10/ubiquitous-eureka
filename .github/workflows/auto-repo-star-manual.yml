@@ -1,0 +1,38 @@
+name: Create & Star Repositories
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create_and_star:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }} # Your PAT stored as secret
+      USERNAME: Dippp10
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+
+      - name: Create and star repositories
+        run: |
+          # Number of repositories to create
+          NUM_REPOS=3
+
+          for i in $(seq 1 $NUM_REPOS); do
+            REPO_NAME="auto-repo-$i-$(date +%s)"
+            echo "Creating repository $REPO_NAME"
+
+            # Create repo via GitHub API
+            curl -s -H "Authorization: token $GH_TOKEN" \
+                 -d "{\"name\":\"$REPO_NAME\", \"auto_init\":true, \"private\":false}" \
+                 https://api.github.com/user/repos
+
+            # Star the repository (as your account)
+            curl -s -X PUT -H "Authorization: token $GH_TOKEN" \
+                 -H "Accept: application/vnd.github.v3+json" \
+                 https://api.github.com/user/starred/$USERNAME/$REPO_NAME
+
+            echo "Repository $REPO_NAME created and starred ✅"
+          done
