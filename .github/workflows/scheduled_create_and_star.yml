@@ -1,22 +1,21 @@
 name: Create & Star Repositories
 
 on:
-  workflow_dispatch:   # Manual trigger
+  workflow_dispatch:
   schedule:
-    - cron: "0 5 * * *"  # 9:00 AM Oman time
+    - cron: "0 5 * * *"  # 05:00 UTC (09:00 Oman time, UTC+4)
+
+permissions:
+  contents: write
 
 jobs:
   create_and_star:
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      GH_TOKEN: ${{ secrets.MY_PAT }}
       USERNAME: Dippp10
-    steps:
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq curl
 
+    steps:
       - name: Create and star repositories
         run: |
           NUM_REPOS=3
@@ -24,15 +23,23 @@ jobs:
             REPO_NAME="ubiquitous-eureka-$i-$(date +%s)"
             echo "Creating repository $REPO_NAME"
 
-            # Create repo via API
-            curl -s -H "Authorization: token $GH_TOKEN" \
-                 -d "{\"name\":\"$REPO_NAME\", \"auto_init\":true, \"private\":false}" \
-                 https://api.github.com/user/repos
+            STATUS=$(curl -s -o response.json -w "%{http_code}" \
+              -H "Authorization: token $GH_TOKEN" \
+              -d "{\"name\":\"$REPO_NAME\", \"auto_init\":true, \"private\":false}" \
+              https://api.github.com/user/repos)
 
-            # Star the repository
-            curl -s -X PUT -H "Authorization: token $GH_TOKEN" \
-                 -H "Accept: application/vnd.github.v3+json" \
-                 https://api.github.com/user/starred/$USERNAME/$REPO_NAME
+            if [ "$STATUS" -eq 201 ]; then
+              echo "Repository created successfully"
 
-            echo "Repository $REPO_NAME created and starred ✅"
+              curl -s -X PUT \
+                -H "Authorization: token $GH_TOKEN" \
+                -H "Accept: application/vnd.github.v3+json" \
+                https://api.github.com/user/starred/$USERNAME/$REPO_NAME
+
+              echo "Repository $REPO_NAME created and starred ✅"
+            else
+              echo "Failed to create repository"
+              cat response.json
+              exit 1
+            fi
           done
