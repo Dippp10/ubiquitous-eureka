@@ -1,59 +1,38 @@
-name: Scheduled Create and Star Repositories
+name: Create & Star Repositories
 
 on:
-  schedule:
-    - cron: '0 0 * * *'   # Runs every day at midnight UTC
-  workflow_dispatch:      # Optional manual trigger
+  workflow_dispatch:
 
 jobs:
-  create-star-multiple:
+  create_and_star:
     runs-on: ubuntu-latest
-
+    env:
+      GH_TOKEN: ${{ secrets.MY_PAT }} # Your PAT stored as secret
+      USERNAME: Dippp10
     steps:
-      - name: Install GitHub CLI
-        run: sudo apt update && sudo apt install gh -y
-
-      - name: Create and Star Repositories
-        env:
-          GH_TOKEN: ${{ secrets.MY_PAT }}  # Use your Personal Access Token
+      - name: Install dependencies
         run: |
-          # Number of repositories to create per run
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+
+      - name: Create and star repositories
+        run: |
+          # Number of repositories to create
           NUM_REPOS=3
 
           for i in $(seq 1 $NUM_REPOS); do
-            REPO_NAME="auto-repo-${{ github.run_number }}-$i"
+            REPO_NAME="auto-repo-$i-$(date +%s)"
             echo "Creating repository $REPO_NAME"
 
-            # Create repository (skip deprecated --confirm)
-            gh repo create "$REPO_NAME" --public --description "Auto-created repo #$i via Actions"
+            # Create repo via GitHub API
+            curl -s -H "Authorization: token $GH_TOKEN" \
+                 -d "{\"name\":\"$REPO_NAME\", \"auto_init\":true, \"private\":false}" \
+                 https://api.github.com/user/repos
 
-            # Create folder and set Git identity
-            mkdir $REPO_NAME
-            cd $REPO_NAME
-            git config --global user.name "Dippp10"
-            git config --global user.email "deepikakarthik697@gmail.com"
-
-            # Add unique README
-            echo "# $REPO_NAME" > README.md
-            echo "Created on $(date -u)" >> README.md
-            echo "Auto-generated via GitHub Actions" >> README.md
-
-            # Initialize git, commit, push
-            git init
-            git add README.md
-            git commit -m "Add README"
-            git branch -M main
-            git remote add origin https://github.com/${{ github.repository_owner }}/$REPO_NAME.git
-            git push -u origin main
-
-            # Add topics
-            gh repo edit "$REPO_NAME" --add-topic "automation" --add-topic "github-actions" --add-topic "demo"
-
-            # Star repository
-            curl -X PUT -H "Authorization: token ${{ secrets.MY_PAT }}" \
+            # Star the repository (as your account)
+            curl -s -X PUT -H "Authorization: token $GH_TOKEN" \
                  -H "Accept: application/vnd.github.v3+json" \
-                 https://api.github.com/user/starred/${{ github.repository_owner }}/$REPO_NAME
+                 https://api.github.com/user/starred/$USERNAME/$REPO_NAME
 
-            # Return to root directory
-            cd ..
+            echo "Repository $REPO_NAME created and starred ✅"
           done
