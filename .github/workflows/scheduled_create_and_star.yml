@@ -1,8 +1,9 @@
 name: Create & Star Repositories
 
 on:
+  workflow_dispatch:   # Manual trigger
   schedule:
-    - cron: "0 5 * * *"  # Runs daily at 9:00 AM Oman time (UTC+4)
+    - cron: "0 5 * * *"  # 9:00 AM Oman time
 
 jobs:
   create_and_star:
@@ -18,12 +19,12 @@ jobs:
 
       - name: Create and star repositories
         run: |
-          NUM_REPOS=3  # Number of repositories to create per run
+          NUM_REPOS=3
           for i in $(seq 1 $NUM_REPOS); do
             REPO_NAME="ubiquitous-eureka-$i-$(date +%s)"
             echo "Creating repository $REPO_NAME"
 
-            # Create repo via GitHub API
+            # Create repo via API
             curl -s -H "Authorization: token $GH_TOKEN" \
                  -d "{\"name\":\"$REPO_NAME\", \"auto_init\":true, \"private\":false}" \
                  https://api.github.com/user/repos
