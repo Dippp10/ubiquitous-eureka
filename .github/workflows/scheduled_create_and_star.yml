@@ -1,45 +1,33 @@
-name: Create & Star Repositories
+name: Create and Star Repositories Safely
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: "0 5 * * *"  # 05:00 UTC (09:00 Oman time, UTC+4)
-
-permissions:
-  contents: write
+    - cron: '0 */4 * * *'  # Runs every 4 hours
+  workflow_dispatch:      # Manual trigger if needed
 
 jobs:
   create_and_star:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.MY_PAT }}
-      USERNAME: Dippp10
+      USERNAME: YourGitHubUsername
+      REPOS_PER_INTERVAL: 30
 
     steps:
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq curl
+
       - name: Create and star repositories
         run: |
-          NUM_REPOS=3
-          for i in $(seq 1 $NUM_REPOS); do
-            REPO_NAME="ubiquitous-eureka-$i-$(date +%s)"
-            echo "Creating repository $REPO_NAME"
-
-            STATUS=$(curl -s -o response.json -w "%{http_code}" \
-              -H "Authorization: token $GH_TOKEN" \
-              -d "{\"name\":\"$REPO_NAME\", \"auto_init\":true, \"private\":false}" \
-              https://api.github.com/user/repos)
-
-            if [ "$STATUS" -eq 201 ]; then
-              echo "Repository created successfully"
-
-              curl -s -X PUT \
-                -H "Authorization: token $GH_TOKEN" \
-                -H "Accept: application/vnd.github.v3+json" \
-                https://api.github.com/user/starred/$USERNAME/$REPO_NAME
-
-              echo "Repository $REPO_NAME created and starred ✅"
-            else
-              echo "Failed to create repository"
-              cat response.json
-              exit 1
-            fi
+          for i in $(seq 1 $REPOS_PER_INTERVAL); do
+            REPO_NAME="auto-repo-$(date +%s)-$i"
+            curl -H "Authorization: token $GH_TOKEN" \
+                 -d "{\"name\":\"$REPO_NAME\",\"auto_init\":true}" \
+                 https://api.github.com/user/repos
+            # Star the repo
+            curl -X PUT -H "Authorization: token $GH_TOKEN" \
+                 -H "Content-Length: 0" \
+                 https://api.github.com/user/starred/$USERNAME/$REPO_NAME
+            # Random delay 10–30 seconds
+            sleep $((RANDOM % 21 + 10))
           done
