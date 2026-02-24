@@ -1,0 +1,49 @@
+name: Scheduled Create and Star Repositories
+
+# Trigger: Scheduled + manual
+on:
+  schedule:
+    - cron: '0 0 * * *'   # Runs every day at midnight UTC
+  workflow_dispatch:      # Optional: run manually too
+
+jobs:
+  create-star-multiple:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up GitHub CLI
+        run: |
+          sudo apt update
+          sudo apt install gh -y
+
+      - name: Authenticate with GitHub CLI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo $GH_TOKEN | gh auth login --with-token
+
+      - name: Create and Star Repositories
+        run: |
+          # Number of repositories to create per run
+          NUM_REPOS=3
+
+          for i in $(seq 1 $NUM_REPOS); do
+            REPO_NAME="auto-repo-${{ github.run_number }}-$i"
+            
+            echo "Creating repository $REPO_NAME"
+            gh repo create "$REPO_NAME" --public --description "Auto-created repo #$i" --confirm
+            
+            # Add a basic README
+            echo "# $REPO_NAME" > README.md
+            git init
+            git add README.md
+            git commit -m "Add README"
+            git branch -M main
+            git remote add origin https://github.com/${{ github.repository_owner }}/$REPO_NAME.git
+            git push -u origin main
+
+            # Star the repository
+            echo "Starring repository $REPO_NAME"
+            curl -X PUT -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3+json" \
+                 https://api.github.com/user/starred/${{ github.repository_owner }}/$REPO_NAME
+          done
