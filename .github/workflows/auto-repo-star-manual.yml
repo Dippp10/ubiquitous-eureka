@@ -3,6 +3,9 @@ name: Create Limited Repositories
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   create_repos:
     runs-on: ubuntu-latest
@@ -11,12 +14,9 @@ jobs:
       USERNAME: Dippp10
 
     steps:
-      - name: Install dependencies
-        run: sudo apt-get install -y jq
-
-      - name: Create limited repositories safely
+      - name: Create and star repositories safely
         run: |
-          NUM_REPOS=500
+          NUM_REPOS=500   # ⚠️ Increase at your own risk
 
           for i in $(seq 1 $NUM_REPOS); do
 
@@ -26,18 +26,45 @@ jobs:
 
             echo "Remaining API calls: $REMAINING"
 
-            if [ "$REMAINING" -lt 50 ]; then
-              echo "Rate limit almost exhausted. Stopping."
+            if [ "$REMAINING" -lt 100 ]; then
+              echo "Rate limit getting low. Stopping."
               break
             fi
 
             REPO_NAME="auto-repo-$i-$(date +%s)"
+            echo "Creating repository: $REPO_NAME"
 
-            curl -s -H "Authorization: token $GH_TOKEN" \
-
-            # Star the repository curl -s -X PUT -H "Authorization: token $GH_TOKEN" \ -H "Accept: application/vnd.github.v3+json" \ https://api.github.com/user/starred/$USERNAME/$REPO_NAME echo "Repository $REPO_NAME created and starred ✅" done
+            # Create repository
+            CREATE_STATUS=$(curl -s -o create_response.json -w "%{http_code}" \
+              -H "Authorization: token $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
               -d "{\"name\":\"$REPO_NAME\", \"auto_init\":true}" \
-              https://api.github.com/user/repos
+              https://api.github.com/user/repos)
 
-            sleep 3
+            if [ "$CREATE_STATUS" -ne 201 ]; then
+              echo "Failed to create repository"
+              cat create_response.json
+              exit 1
+            fi
+
+            echo "Repository created successfully"
+
+            # Star repository
+            STAR_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              -X PUT \
+              -H "Authorization: token $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/user/starred/$USERNAME/$REPO_NAME)
+
+            if [ "$STAR_STATUS" -eq 204 ]; then
+              echo "Repository starred successfully ✅"
+            else
+              echo "Failed to star repository"
+              exit 1
+            fi
+
+            echo "Completed $REPO_NAME"
+            echo "-----------------------------------"
+
+            sleep 5
           done
